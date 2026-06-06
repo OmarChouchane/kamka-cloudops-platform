@@ -1,0 +1,147 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: kamka-postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=kamka_db
+    networks:
+      - kamka_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-test:
+    image: postgres:15
+    container_name: kamka-postgres-test
+    ports:
+      - '5431:5432'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=kamka_test_db
+    networks:
+      - kamka_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./app/backend
+      dockerfile: Dockerfile-local
+    image: kamka-api:dev
+    container_name: kamka-api
+    ports:
+      - '3000:3000'
+    tty: true
+    volumes:
+      - ./app/backend:/app
+      - /app/node_modules
+    networks:
+      - kamka_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_DATABASE=kamka_db
+      - DB_USER=kamka_user
+      - DB_PASSWORD=kamkapassword
+      - DB_PORT=5432
+    command:
+      - |
+        npm run sequelize db:migrate
+        npm run dev
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/healthz || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  api-test:
+    build:
+      context: ./app/backend
+      dockerfile: Dockerfile-local
+    image: kamka-api:test
+    container_name: kamka-api-test
+    ports:
+      - '3002:3000'
+    tty: true
+    volumes:
+      - ./app/backend:/app
+      - /app/node_modules
+    networks:
+      - kamka_network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    environment:
+      - NODE_ENV=test
+      - DB_HOST=postgres-test
+      - DB_DATABASE=kamka_test_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - INTEGRATION_TEST_HOST_URL=http://localhost:3002
+    command:
+      - |
+        npm run sequelize db:migrate:undo:all
+        npm run sequelize db:migrate
+        npm run sequelize db:seed:all
+        nodemon --legacy-watch src/server.js
+
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile-local
+    image: kamka-frontend:dev
+    container_name: kamka-frontend
+    ports:
+      - '3001:3000'
+    tty: true
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - kamka_network
+    depends_on:
+      api:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    command:
+      - |
+        npm run dev
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/api/healthz || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  kamka_network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  postgres_test_data:
