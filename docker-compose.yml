@@ -116,6 +116,7 @@ services:
     volumes:
       - ./app/frontend:/app
       - /app/node_modules
+      - /app/.next
     networks:
       - application
     container_name: monorepo-frontend
