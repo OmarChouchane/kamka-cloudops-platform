@@ -1,0 +1,16 @@
+project_name      = "kamka"
+environment       = "prod"
+region            = "eu-west-1"
+
+# Ubuntu 22.04 LTS (Jammy) — eu-west-1
+ami_id            = "ami-0694d931cee176e7d"
+
+instance_type     = "t3.small"
+key_name          = "kamka-prod-key"
+
+# Restrict SSH to your office/bastion IP — never 0.0.0.0/0 in prod
+allowed_ssh_cidr  = "YOUR_OFFICE_IP/32"
+
+vpc_cidr          = "10.0.0.0/16"
+subnet_cidr       = "10.0.1.0/24"
+availability_zone = "eu-west-1a"

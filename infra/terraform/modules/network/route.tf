@@ -7,7 +7,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "kamka-public-rt"
+    Name = "${var.project_name}-public-rt"
   }
 }
 

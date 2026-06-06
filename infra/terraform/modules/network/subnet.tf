@@ -1,10 +1,10 @@
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = var.subnet_cidr
+  availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
-  availability_zone       = "eu-west-1a"
 
   tags = {
-    Name = "kamka-public-subnet"
+    Name = "${var.project_name}-public-subnet"
   }
 }
