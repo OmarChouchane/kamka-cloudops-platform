@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Environment — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# Next.js build output
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform state and secrets
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+*.tfvars
+!*.tfvars.example
+override.tf
+crash.log
+
+# Docker volumes (local data)
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp

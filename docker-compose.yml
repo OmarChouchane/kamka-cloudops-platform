@@ -42,14 +42,15 @@ services:
 
   api:
     build:
-      context: ../backend/.
-      dockerfile: ../backend/Dockerfile-local
+      context: ./app/backend
+      dockerfile: Dockerfile-local
     image: api:v1
     ports:
       - '3000:3000'
     tty: true
     volumes:
-      - '../backend:/app'
+      - './app/backend:/app'
+      - /app/node_modules
     networks:
       - application
     container_name: monorepo-backend
@@ -58,7 +59,13 @@ services:
         condition: service_healthy
     entrypoint: ['/bin/sh', '-c']
     environment:
-      - INTEGRATION_TEST_HOST_URL= http://localhost:3002
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_DATABASE=monorepodb
+      - DB_USER=monorepo_user
+      - DB_PASSWORD=monorepo-password
+      - DB_PORT=5432
+      - INTEGRATION_TEST_HOST_URL=http://localhost:3002
     command:
       - |
         npm i
@@ -67,14 +74,15 @@ services:
 
   api-test:
     build:
-      context: ../backend/.
-      dockerfile: ../backend/Dockerfile-local
+      context: ./app/backend
+      dockerfile: Dockerfile-local
     image: api-test:v1
     ports:
       - '3002:3000'
     tty: true
     volumes:
-      - '../backend:/app'
+      - './app/backend:/app'
+      - /app/node_modules
     networks:
       - application
     container_name: monorepo-backend-test
@@ -88,7 +96,7 @@ services:
       - DB_DATABASE=postgres
       - DB_USER=postgres
       - DB_PASSWORD=postgres
-      - INTEGRATION_TEST_HOST_URL= http://localhost:3002
+      - INTEGRATION_TEST_HOST_URL=http://localhost:3002
     command:
       - |
         npm i
@@ -99,14 +107,15 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: ./app/frontend
       dockerfile: Dockerfile-local
     image: frontend:v1
     ports:
       - '3001:3000'
     tty: true
     volumes:
-      - ../frontend/:/app
+      - ./app/frontend:/app
+      - /app/node_modules
     networks:
       - application
     container_name: monorepo-frontend
@@ -118,7 +127,7 @@ services:
     depends_on:
       - api
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
 
 networks:
   application:
