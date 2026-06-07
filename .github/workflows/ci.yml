@@ -69,21 +69,50 @@ jobs:
           format: json
           output: trivy-fs-frontend.json
 
+      - name: Upload FS scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-reports-${{ github.run_number }}
+          path: |
+            trivy-fs-backend.json
+            trivy-fs-frontend.json
+          retention-days: 30
+
       - name: Slack — Trivy FS report
         if: always()
         run: |
           send_report() {
-            local file=$1
-            local label=$2
-            local high critical
+            local file=$1 label=$2 high critical icon short_sha run_url artifact payload
             high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
             critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
-            local icon="✅"
+            icon="✅"
             [ "$critical" -gt 0 ] && icon="🔴"
             [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
+            short_sha="${GITHUB_SHA::8}"
+            run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            artifact="trivy-fs-reports-$GITHUB_RUN_NUMBER"
+            payload=$(jq -n \
+              --arg title "$icon Trivy Filesystem Scan — $label" \
+              --arg critical "$critical" \
+              --arg high "$high" \
+              --arg branch "$GITHUB_REF_NAME" \
+              --arg commit "$short_sha" \
+              --arg footer "Run #${GITHUB_RUN_NUMBER}  •  <${run_url}|View in GitHub Actions>  •  Full report: artifact \`${artifact}\`" \
+              '{blocks:[
+                {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
+                {type:"section",fields:[
+                  {type:"mrkdwn",text:"*CRITICAL*\n\($critical)"},
+                  {type:"mrkdwn",text:"*HIGH*\n\($high)"},
+                  {type:"mrkdwn",text:"*Branch*\n`\($branch)`"},
+                  {type:"mrkdwn",text:"*Commit*\n`\($commit)`"}
+                ]},
+                {type:"section",text:{type:"mrkdwn",text:$footer}},
+                {type:"divider"}
+              ]}')
             curl -s -X POST "$SLACK_WEBHOOK_URL" \
               -H 'Content-type: application/json' \
-              --data "{\"text\":\"$icon *Trivy FS — $label* | HIGH: $high | CRITICAL: $critical | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}"
+              --data "$payload"
           }
           send_report trivy-fs-backend.json "Backend"
           send_report trivy-fs-frontend.json "Frontend"
@@ -159,21 +188,50 @@ jobs:
           format: json
           output: trivy-image-frontend.json
 
+      - name: Upload image scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-reports-${{ github.run_number }}
+          path: |
+            trivy-image-backend.json
+            trivy-image-frontend.json
+          retention-days: 30
+
       - name: Slack — Trivy image report
         if: always()
         run: |
           send_report() {
-            local file=$1
-            local label=$2
-            local high critical
+            local file=$1 label=$2 high critical icon short_sha run_url artifact payload
             high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
             critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
-            local icon="✅"
+            icon="✅"
             [ "$critical" -gt 0 ] && icon="🔴"
             [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
+            short_sha="${GITHUB_SHA::8}"
+            run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            artifact="trivy-image-reports-$GITHUB_RUN_NUMBER"
+            payload=$(jq -n \
+              --arg title "$icon Trivy Image Scan — $label" \
+              --arg critical "$critical" \
+              --arg high "$high" \
+              --arg branch "$GITHUB_REF_NAME" \
+              --arg commit "$short_sha" \
+              --arg footer "Run #${GITHUB_RUN_NUMBER}  •  <${run_url}|View in GitHub Actions>  •  Full report: artifact \`${artifact}\`" \
+              '{blocks:[
+                {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
+                {type:"section",fields:[
+                  {type:"mrkdwn",text:"*CRITICAL*\n\($critical)"},
+                  {type:"mrkdwn",text:"*HIGH*\n\($high)"},
+                  {type:"mrkdwn",text:"*Branch*\n`\($branch)`"},
+                  {type:"mrkdwn",text:"*Commit*\n`\($commit)`"}
+                ]},
+                {type:"section",text:{type:"mrkdwn",text:$footer}},
+                {type:"divider"}
+              ]}')
             curl -s -X POST "$SLACK_WEBHOOK_URL" \
               -H 'Content-type: application/json' \
-              --data "{\"text\":\"$icon *Trivy Image — $label* | HIGH: $high | CRITICAL: $critical | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}"
+              --data "$payload"
           }
           send_report trivy-image-backend.json "Backend"
           send_report trivy-image-frontend.json "Frontend"
