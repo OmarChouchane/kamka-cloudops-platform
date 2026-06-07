@@ -82,10 +82,10 @@ jobs:
       - name: Slack — Trivy FS report
         if: always()
         run: |
-          be_crit=$(grep -c "│ CRITICAL" trivy-fs-backend.txt 2>/dev/null || echo 0)
-          be_high=$(grep -c "│ HIGH"     trivy-fs-backend.txt 2>/dev/null || echo 0)
-          fe_crit=$(grep -c "│ CRITICAL" trivy-fs-frontend.txt 2>/dev/null || echo 0)
-          fe_high=$(grep -c "│ HIGH"     trivy-fs-frontend.txt 2>/dev/null || echo 0)
+          be_high=$(grep 'Total:' trivy-fs-backend.txt 2>/dev/null | grep -oP '(?<=HIGH: )\d+' | awk '{s+=$1} END {print s+0}')
+          be_crit=$(grep 'Total:' trivy-fs-backend.txt 2>/dev/null | grep -oP '(?<=CRITICAL: )\d+' | awk '{s+=$1} END {print s+0}')
+          fe_high=$(grep 'Total:' trivy-fs-frontend.txt 2>/dev/null | grep -oP '(?<=HIGH: )\d+' | awk '{s+=$1} END {print s+0}')
+          fe_crit=$(grep 'Total:' trivy-fs-frontend.txt 2>/dev/null | grep -oP '(?<=CRITICAL: )\d+' | awk '{s+=$1} END {print s+0}')
           total_crit=$((be_crit + fe_crit))
           total_high=$((be_high + fe_high))
           icon="✅"
@@ -200,10 +200,10 @@ jobs:
       - name: Slack — Trivy image report
         if: always()
         run: |
-          be_crit=$(grep -c "│ CRITICAL" trivy-image-backend.txt 2>/dev/null || echo 0)
-          be_high=$(grep -c "│ HIGH"     trivy-image-backend.txt 2>/dev/null || echo 0)
-          fe_crit=$(grep -c "│ CRITICAL" trivy-image-frontend.txt 2>/dev/null || echo 0)
-          fe_high=$(grep -c "│ HIGH"     trivy-image-frontend.txt 2>/dev/null || echo 0)
+          be_high=$(grep 'Total:' trivy-image-backend.txt 2>/dev/null | grep -oP '(?<=HIGH: )\d+' | awk '{s+=$1} END {print s+0}')
+          be_crit=$(grep 'Total:' trivy-image-backend.txt 2>/dev/null | grep -oP '(?<=CRITICAL: )\d+' | awk '{s+=$1} END {print s+0}')
+          fe_high=$(grep 'Total:' trivy-image-frontend.txt 2>/dev/null | grep -oP '(?<=HIGH: )\d+' | awk '{s+=$1} END {print s+0}')
+          fe_crit=$(grep 'Total:' trivy-image-frontend.txt 2>/dev/null | grep -oP '(?<=CRITICAL: )\d+' | awk '{s+=$1} END {print s+0}')
           total_crit=$((be_crit + fe_crit))
           total_high=$((be_high + fe_high))
           icon="✅"
