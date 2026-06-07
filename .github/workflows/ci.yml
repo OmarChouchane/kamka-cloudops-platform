@@ -1,29 +1,32 @@
-name: Kamka CI Pipeline
+name: Kamka CI + GHCR
 
 on:
   push:
     branches: [ "master" ]
-  pull_request:
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
       - name: Build backend image
         run: |
-          docker build -t kamka-backend:latest ./app/backend
+          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-backend:latest ./app/backend
 
       - name: Build frontend image
         run: |
-          docker build -t kamka-frontend:latest ./app/frontend
+          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-frontend:latest ./app/frontend
 
-      - name: Validate images exist
+      - name: Push backend image
         run: |
-          docker images
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-backend:latest
+
+      - name: Push frontend image
+        run: |
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-frontend:latest
