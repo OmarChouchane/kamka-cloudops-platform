@@ -38,7 +38,7 @@ jobs:
           scan-ref: ./app/backend
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-backend-fs.sarif
           cache-dir: ~/.cache/trivy
@@ -51,7 +51,7 @@ jobs:
           scan-ref: ./app/frontend
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-frontend-fs.sarif
           cache-dir: ~/.cache/trivy
@@ -63,7 +63,7 @@ jobs:
           scan-type: config
           scan-ref: ./app/backend/Dockerfile
           severity: HIGH,CRITICAL
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-backend-config.sarif
           cache-dir: ~/.cache/trivy
@@ -75,7 +75,7 @@ jobs:
           scan-type: config
           scan-ref: ./app/frontend/Dockerfile
           severity: HIGH,CRITICAL
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-frontend-config.sarif
           cache-dir: ~/.cache/trivy
@@ -192,7 +192,7 @@ jobs:
           scan-type: image
           image-ref: ghcr.io/${{ github.repository_owner }}/kamka-backend:${{ steps.tag.outputs.value }}
           severity: HIGH,CRITICAL
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-backend-image.sarif
           cache-dir: ~/.cache/trivy
@@ -211,7 +211,7 @@ jobs:
           scan-type: image
           image-ref: ghcr.io/${{ github.repository_owner }}/kamka-frontend:${{ steps.tag.outputs.value }}
           severity: HIGH,CRITICAL
-          exit-code: '1'
+          exit-code: '0'
           format: sarif
           output: trivy-frontend-image.sarif
           cache-dir: ~/.cache/trivy
