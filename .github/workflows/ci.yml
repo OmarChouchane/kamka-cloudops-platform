@@ -94,10 +94,12 @@ jobs:
           short_sha="${GITHUB_SHA::8}"
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           artifact="trivy-fs-reports-$GITHUB_RUN_NUMBER"
+          table="$(printf '%-12s  %-10s  %s' 'Service' 'CRITICAL' 'HIGH')
+          $(printf '%-12s  %-10s  %s' 'Backend'  "$be_crit" "$be_high")
+          $(printf '%-12s  %-10s  %s' 'Frontend' "$fe_crit" "$fe_high")"
           payload=$(jq -n \
             --arg icon "$icon" \
-            --arg be_crit "$be_crit" --arg be_high "$be_high" \
-            --arg fe_crit "$fe_crit" --arg fe_high "$fe_high" \
+            --arg table "$table" \
             --arg branch "$GITHUB_REF_NAME" \
             --arg commit "$short_sha" \
             --arg run_num "$GITHUB_RUN_NUMBER" \
@@ -105,11 +107,7 @@ jobs:
             --arg artifact "$artifact" \
             '{blocks:[
               {type:"header",text:{type:"plain_text",text:($icon + " Trivy Filesystem Scan Report"),emoji:true}},
-              {type:"section",fields:[
-                {type:"mrkdwn",text:"*Service*\nBackend\nFrontend"},
-                {type:"mrkdwn",text:"*CRITICAL*\n\($be_crit)\n\($fe_crit)"},
-                {type:"mrkdwn",text:"*HIGH*\n\($be_high)\n\($fe_high)"}
-              ]},
+              {type:"section",text:{type:"mrkdwn",text:("```\n" + $table + "\n```")}},
               {type:"context",elements:[
                 {type:"mrkdwn",text:("Branch: `" + $branch + "` • Commit: `" + $commit + "` • Run #" + $run_num + " • <" + $run_url + "|View in GitHub Actions> • Artifact: `" + $artifact + "`")}
               ]}
@@ -214,10 +212,12 @@ jobs:
           short_sha="${GITHUB_SHA::8}"
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           artifact="trivy-image-reports-$GITHUB_RUN_NUMBER"
+          table="$(printf '%-12s  %-10s  %s' 'Service' 'CRITICAL' 'HIGH')
+          $(printf '%-12s  %-10s  %s' 'Backend'  "$be_crit" "$be_high")
+          $(printf '%-12s  %-10s  %s' 'Frontend' "$fe_crit" "$fe_high")"
           payload=$(jq -n \
             --arg icon "$icon" \
-            --arg be_crit "$be_crit" --arg be_high "$be_high" \
-            --arg fe_crit "$fe_crit" --arg fe_high "$fe_high" \
+            --arg table "$table" \
             --arg branch "$GITHUB_REF_NAME" \
             --arg commit "$short_sha" \
             --arg run_num "$GITHUB_RUN_NUMBER" \
@@ -225,11 +225,7 @@ jobs:
             --arg artifact "$artifact" \
             '{blocks:[
               {type:"header",text:{type:"plain_text",text:($icon + " Trivy Image Scan Report"),emoji:true}},
-              {type:"section",fields:[
-                {type:"mrkdwn",text:"*Service*\nBackend\nFrontend"},
-                {type:"mrkdwn",text:"*CRITICAL*\n\($be_crit)\n\($fe_crit)"},
-                {type:"mrkdwn",text:"*HIGH*\n\($be_high)\n\($fe_high)"}
-              ]},
+              {type:"section",text:{type:"mrkdwn",text:("```\n" + $table + "\n```")}},
               {type:"context",elements:[
                 {type:"mrkdwn",text:("Branch: `" + $branch + "` • Commit: `" + $commit + "` • Run #" + $run_num + " • <" + $run_url + "|View in GitHub Actions> • Artifact: `" + $artifact + "`")}
               ]}
