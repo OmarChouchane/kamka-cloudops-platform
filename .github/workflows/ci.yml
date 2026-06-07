@@ -3,8 +3,14 @@ name: Kamka CI + GHCR
 on:
   push:
     branches: ["master"]
+    paths:
+      - "app/**"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: ["master"]
+    paths:
+      - "app/**"
+      - ".github/workflows/ci.yml"
 
 concurrency:
   group: kamka-ci-${{ github.ref }}
