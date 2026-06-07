@@ -30,3 +30,4 @@ jobs:
       - name: Push frontend image
         run: |
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-frontend:latest
+          
