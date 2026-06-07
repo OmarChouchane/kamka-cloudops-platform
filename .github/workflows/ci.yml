@@ -56,6 +56,8 @@ jobs:
           scan-ref: ./app/backend
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
+          format: json
+          output: trivy-fs-backend.json
 
       - name: Trivy FS scan (frontend)
         uses: aquasecurity/trivy-action@0.35.0
@@ -64,6 +66,29 @@ jobs:
           scan-ref: ./app/frontend
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
+          format: json
+          output: trivy-fs-frontend.json
+
+      - name: Slack — Trivy FS report
+        if: always()
+        run: |
+          send_report() {
+            local file=$1
+            local label=$2
+            local high critical
+            high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
+            critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
+            local icon="✅"
+            [ "$critical" -gt 0 ] && icon="🔴"
+            [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"$icon *Trivy FS — $label* | HIGH: $high | CRITICAL: $critical | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}"
+          }
+          send_report trivy-fs-backend.json "Backend"
+          send_report trivy-fs-frontend.json "Frontend"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ─── Job 2: Build → Image scan → Push ───────────────────────────────────────
   build-and-push:
@@ -121,6 +146,8 @@ jobs:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/kamka-backend:${{ steps.meta.outputs.tag }}
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
+          format: json
+          output: trivy-image-backend.json
 
       - name: Trivy image scan (frontend)
         uses: aquasecurity/trivy-action@0.35.0
@@ -129,6 +156,29 @@ jobs:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/kamka-frontend:${{ steps.meta.outputs.tag }}
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
+          format: json
+          output: trivy-image-frontend.json
+
+      - name: Slack — Trivy image report
+        if: always()
+        run: |
+          send_report() {
+            local file=$1
+            local label=$2
+            local high critical
+            high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
+            critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
+            local icon="✅"
+            [ "$critical" -gt 0 ] && icon="🔴"
+            [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"$icon *Trivy Image — $label* | HIGH: $high | CRITICAL: $critical | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}"
+          }
+          send_report trivy-image-backend.json "Backend"
+          send_report trivy-image-frontend.json "Frontend"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Push backend image
         if: github.event_name == 'push'
@@ -170,7 +220,6 @@ jobs:
             for service in api frontend; do
               docker compose up -d --no-deps --force-recreate $service
             done
-
 
             echo "Cleaning unused images..."
             docker image prune -f
