@@ -2,15 +2,20 @@
 # Set DOMAIN env var to your domain for automatic HTTPS (Let's Encrypt).
 # Without a domain, defaults to :80 (HTTP only — for local testing).
 
-{$DOMAIN:localhost} {
+http://{$DOMAIN:localhost} {
 
-    # API routes — strip /api prefix before proxying to backend
+    # API routes
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy api:3000
     }
 
-    # Direct health check passthrough
+    # Direct API endpoints (frontend calls these without /api prefix)
+    handle /users* {
+        reverse_proxy api:3000
+    }
+
+    # Health check
     handle /healthz {
         reverse_proxy api:3000
     }

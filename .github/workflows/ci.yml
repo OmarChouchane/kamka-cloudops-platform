@@ -165,6 +165,15 @@ jobs:
 
             echo "Cleaning unused images..."
             docker image prune -f
+
+            echo "Running DB migrations..."
+            
+            docker exec kamka-api npm run sequelize db:migrate
+
+            echo "Health check..."
+            sleep 10
+            curl -f http://localhost/healthz || exit 1
+
         env:
           CR_PAT: ${{ secrets.CR_PAT }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
