@@ -25,7 +25,7 @@ services:
         max-file: "3"
 
   api:
-    image: ${REGISTRY}/kamka-api:${IMAGE_TAG:-latest}
+    image: ${REGISTRY}/kamka-backend:${IMAGE_TAG:-latest}
     container_name: kamka-api
     restart: unless-stopped
     networks:

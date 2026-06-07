@@ -150,8 +150,12 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: CR_PAT,GHCR_USERNAME
           script: |
             cd /opt/kamka
+
+            echo "Logging in to GHCR..."
+            echo "$CR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
             echo "Pulling latest images..."
             docker compose pull
@@ -161,3 +165,6 @@ jobs:
 
             echo "Cleaning unused images..."
             docker image prune -f
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
