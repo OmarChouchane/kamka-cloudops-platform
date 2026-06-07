@@ -2,32 +2,235 @@ name: Kamka CI + GHCR
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+concurrency:
+  group: kamka-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-push:
+
+  # ─── Job 1: FS + Dockerfile scan + SARIF reporting ───────────────────────────
+  security-scan:
+    name: Security — FS + Config Scan
     runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write    # required for SARIF upload to GitHub Security tab
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}
+          restore-keys: trivy-db-
+
+      - name: Trivy FS scan (backend)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: ./app/backend
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: sarif
+          output: trivy-backend-fs.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Trivy FS scan (frontend)
+        uses: aquasecurity/trivy-action@0.35.0
+        if: always()
+        with:
+          scan-type: fs
+          scan-ref: ./app/frontend
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: sarif
+          output: trivy-frontend-fs.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Trivy config scan (backend Dockerfile)
+        uses: aquasecurity/trivy-action@0.35.0
+        if: always()
+        with:
+          scan-type: config
+          scan-ref: ./app/backend/Dockerfile
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: sarif
+          output: trivy-backend-config.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Trivy config scan (frontend Dockerfile)
+        uses: aquasecurity/trivy-action@0.35.0
+        if: always()
+        with:
+          scan-type: config
+          scan-ref: ./app/frontend/Dockerfile
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: sarif
+          output: trivy-frontend-config.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Upload backend FS scan SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend-fs.sarif
+          category: backend-fs
+
+      - name: Upload frontend FS scan SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend-fs.sarif
+          category: frontend-fs
+
+      - name: Upload backend Dockerfile config SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend-config.sarif
+          category: backend-config
+
+      - name: Upload frontend Dockerfile config SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend-config.sarif
+          category: frontend-config
+
+  # ─── Job 2: Build → SBOM → Image scan → Push ─────────────────────────────────
+  build-and-push:
+    name: Build → SBOM → Scan → Push
+    needs: security-scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}
+          restore-keys: trivy-db-
+
       - name: Login to GHCR
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag (short SHA)
+        id: tag
+        run: echo "value=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
       - name: Build backend image
         run: |
-          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-backend:latest ./app/backend
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/kamka-backend:${{ steps.tag.outputs.value }} \
+            -t ghcr.io/${{ github.repository_owner }}/kamka-backend:latest \
+            ./app/backend
 
       - name: Build frontend image
         run: |
-          docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-frontend:latest ./app/frontend
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3000' }} \
+            -t ghcr.io/${{ github.repository_owner }}/kamka-frontend:${{ steps.tag.outputs.value }} \
+            -t ghcr.io/${{ github.repository_owner }}/kamka-frontend:latest \
+            ./app/frontend
+
+      # SBOM first — compliance artifact captured before scan gate
+      - name: Generate SBOM — backend (CycloneDX, from image)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository_owner }}/kamka-backend:${{ steps.tag.outputs.value }}
+          format: cyclonedx
+          output: sbom-backend.json
+          cache-dir: ~/.cache/trivy
+
+      - name: Generate SBOM — frontend (CycloneDX, from image)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository_owner }}/kamka-frontend:${{ steps.tag.outputs.value }}
+          format: cyclonedx
+          output: sbom-frontend.json
+          cache-dir: ~/.cache/trivy
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            sbom-backend.json
+            sbom-frontend.json
+          retention-days: 90
+
+      # Image scan gate — runs after SBOM, blocks push on findings
+      - name: Trivy image scan (backend)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository_owner }}/kamka-backend:${{ steps.tag.outputs.value }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: sarif
+          output: trivy-backend-image.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Upload backend image scan SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-backend-image.sarif
+          category: backend-image
+
+      - name: Trivy image scan (frontend)
+        uses: aquasecurity/trivy-action@0.35.0
+        if: always()
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository_owner }}/kamka-frontend:${{ steps.tag.outputs.value }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: sarif
+          output: trivy-frontend-image.sarif
+          cache-dir: ~/.cache/trivy
+
+      - name: Upload frontend image scan SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend-image.sarif
+          category: frontend-image
 
       - name: Push backend image
+        if: github.event_name == 'push'
         run: |
-          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-backend:latest
+          docker push ghcr.io/${{ github.repository_owner }}/kamka-backend:${{ steps.tag.outputs.value }}
+          docker push ghcr.io/${{ github.repository_owner }}/kamka-backend:latest
 
       - name: Push frontend image
+        if: github.event_name == 'push'
         run: |
-          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/kamka-frontend:latest
-          
+          docker push ghcr.io/${{ github.repository_owner }}/kamka-frontend:${{ steps.tag.outputs.value }}
+          docker push ghcr.io/${{ github.repository_owner }}/kamka-frontend:latest
