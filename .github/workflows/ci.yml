@@ -56,8 +56,8 @@ jobs:
           scan-ref: ./app/backend
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
-          format: json
-          output: trivy-fs-backend.json
+          format: table
+          output: trivy-fs-backend.txt
 
       - name: Trivy FS scan (frontend)
         uses: aquasecurity/trivy-action@0.35.0
@@ -66,8 +66,8 @@ jobs:
           scan-ref: ./app/frontend
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
-          format: json
-          output: trivy-fs-frontend.json
+          format: table
+          output: trivy-fs-frontend.txt
 
       - name: Upload FS scan reports
         if: always()
@@ -75,47 +75,48 @@ jobs:
         with:
           name: trivy-fs-reports-${{ github.run_number }}
           path: |
-            trivy-fs-backend.json
-            trivy-fs-frontend.json
+            trivy-fs-backend.txt
+            trivy-fs-frontend.txt
           retention-days: 30
 
       - name: Slack — Trivy FS report
         if: always()
         run: |
-          send_report() {
-            local file=$1 label=$2 high critical icon short_sha run_url artifact payload
-            high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
-            critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
-            icon="✅"
-            [ "$critical" -gt 0 ] && icon="🔴"
-            [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
-            short_sha="${GITHUB_SHA::8}"
-            run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            artifact="trivy-fs-reports-$GITHUB_RUN_NUMBER"
-            payload=$(jq -n \
-              --arg title "$icon Trivy Filesystem Scan — $label" \
-              --arg critical "$critical" \
-              --arg high "$high" \
-              --arg branch "$GITHUB_REF_NAME" \
-              --arg commit "$short_sha" \
-              --arg footer "Run #${GITHUB_RUN_NUMBER}  •  <${run_url}|View in GitHub Actions>  •  Full report: artifact \`${artifact}\`" \
-              '{blocks:[
-                {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
-                {type:"section",fields:[
-                  {type:"mrkdwn",text:"*CRITICAL*\n\($critical)"},
-                  {type:"mrkdwn",text:"*HIGH*\n\($high)"},
-                  {type:"mrkdwn",text:"*Branch*\n`\($branch)`"},
-                  {type:"mrkdwn",text:"*Commit*\n`\($commit)`"}
-                ]},
-                {type:"section",text:{type:"mrkdwn",text:$footer}},
-                {type:"divider"}
-              ]}')
-            curl -s -X POST "$SLACK_WEBHOOK_URL" \
-              -H 'Content-type: application/json' \
-              --data "$payload"
-          }
-          send_report trivy-fs-backend.json "Backend"
-          send_report trivy-fs-frontend.json "Frontend"
+          be_crit=$(grep -c "│ CRITICAL" trivy-fs-backend.txt 2>/dev/null || echo 0)
+          be_high=$(grep -c "│ HIGH"     trivy-fs-backend.txt 2>/dev/null || echo 0)
+          fe_crit=$(grep -c "│ CRITICAL" trivy-fs-frontend.txt 2>/dev/null || echo 0)
+          fe_high=$(grep -c "│ HIGH"     trivy-fs-frontend.txt 2>/dev/null || echo 0)
+          total_crit=$((be_crit + fe_crit))
+          total_high=$((be_high + fe_high))
+          icon="✅"
+          [ "$total_crit" -gt 0 ] && icon="🔴"
+          [ "$total_high" -gt 0 ] && [ "$total_crit" -eq 0 ] && icon="🟡"
+          short_sha="${GITHUB_SHA::8}"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          artifact="trivy-fs-reports-$GITHUB_RUN_NUMBER"
+          payload=$(jq -n \
+            --arg icon "$icon" \
+            --arg be_crit "$be_crit" --arg be_high "$be_high" \
+            --arg fe_crit "$fe_crit" --arg fe_high "$fe_high" \
+            --arg branch "$GITHUB_REF_NAME" \
+            --arg commit "$short_sha" \
+            --arg run_num "$GITHUB_RUN_NUMBER" \
+            --arg run_url "$run_url" \
+            --arg artifact "$artifact" \
+            '{blocks:[
+              {type:"header",text:{type:"plain_text",text:($icon + " Trivy Filesystem Scan Report"),emoji:true}},
+              {type:"section",fields:[
+                {type:"mrkdwn",text:"*Service*\nBackend\nFrontend"},
+                {type:"mrkdwn",text:"*CRITICAL*\n\($be_crit)\n\($fe_crit)"},
+                {type:"mrkdwn",text:"*HIGH*\n\($be_high)\n\($fe_high)"}
+              ]},
+              {type:"context",elements:[
+                {type:"mrkdwn",text:("Branch: `" + $branch + "` • Commit: `" + $commit + "` • Run #" + $run_num + " • <" + $run_url + "|View in GitHub Actions> • Artifact: `" + $artifact + "`")}
+              ]}
+            ]}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data "$payload"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -175,8 +176,8 @@ jobs:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/kamka-backend:${{ steps.meta.outputs.tag }}
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
-          format: json
-          output: trivy-image-backend.json
+          format: table
+          output: trivy-image-backend.txt
 
       - name: Trivy image scan (frontend)
         uses: aquasecurity/trivy-action@0.35.0
@@ -185,8 +186,8 @@ jobs:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/kamka-frontend:${{ steps.meta.outputs.tag }}
           trivy-config: security/trivy/trivy.yaml
           cache-dir: ~/.cache/trivy
-          format: json
-          output: trivy-image-frontend.json
+          format: table
+          output: trivy-image-frontend.txt
 
       - name: Upload image scan reports
         if: always()
@@ -194,47 +195,48 @@ jobs:
         with:
           name: trivy-image-reports-${{ github.run_number }}
           path: |
-            trivy-image-backend.json
-            trivy-image-frontend.json
+            trivy-image-backend.txt
+            trivy-image-frontend.txt
           retention-days: 30
 
       - name: Slack — Trivy image report
         if: always()
         run: |
-          send_report() {
-            local file=$1 label=$2 high critical icon short_sha run_url artifact payload
-            high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$file" 2>/dev/null || echo 0)
-            critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$file" 2>/dev/null || echo 0)
-            icon="✅"
-            [ "$critical" -gt 0 ] && icon="🔴"
-            [ "$high" -gt 0 ] && [ "$critical" -eq 0 ] && icon="🟡"
-            short_sha="${GITHUB_SHA::8}"
-            run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            artifact="trivy-image-reports-$GITHUB_RUN_NUMBER"
-            payload=$(jq -n \
-              --arg title "$icon Trivy Image Scan — $label" \
-              --arg critical "$critical" \
-              --arg high "$high" \
-              --arg branch "$GITHUB_REF_NAME" \
-              --arg commit "$short_sha" \
-              --arg footer "Run #${GITHUB_RUN_NUMBER}  •  <${run_url}|View in GitHub Actions>  •  Full report: artifact \`${artifact}\`" \
-              '{blocks:[
-                {type:"header",text:{type:"plain_text",text:$title,emoji:true}},
-                {type:"section",fields:[
-                  {type:"mrkdwn",text:"*CRITICAL*\n\($critical)"},
-                  {type:"mrkdwn",text:"*HIGH*\n\($high)"},
-                  {type:"mrkdwn",text:"*Branch*\n`\($branch)`"},
-                  {type:"mrkdwn",text:"*Commit*\n`\($commit)`"}
-                ]},
-                {type:"section",text:{type:"mrkdwn",text:$footer}},
-                {type:"divider"}
-              ]}')
-            curl -s -X POST "$SLACK_WEBHOOK_URL" \
-              -H 'Content-type: application/json' \
-              --data "$payload"
-          }
-          send_report trivy-image-backend.json "Backend"
-          send_report trivy-image-frontend.json "Frontend"
+          be_crit=$(grep -c "│ CRITICAL" trivy-image-backend.txt 2>/dev/null || echo 0)
+          be_high=$(grep -c "│ HIGH"     trivy-image-backend.txt 2>/dev/null || echo 0)
+          fe_crit=$(grep -c "│ CRITICAL" trivy-image-frontend.txt 2>/dev/null || echo 0)
+          fe_high=$(grep -c "│ HIGH"     trivy-image-frontend.txt 2>/dev/null || echo 0)
+          total_crit=$((be_crit + fe_crit))
+          total_high=$((be_high + fe_high))
+          icon="✅"
+          [ "$total_crit" -gt 0 ] && icon="🔴"
+          [ "$total_high" -gt 0 ] && [ "$total_crit" -eq 0 ] && icon="🟡"
+          short_sha="${GITHUB_SHA::8}"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          artifact="trivy-image-reports-$GITHUB_RUN_NUMBER"
+          payload=$(jq -n \
+            --arg icon "$icon" \
+            --arg be_crit "$be_crit" --arg be_high "$be_high" \
+            --arg fe_crit "$fe_crit" --arg fe_high "$fe_high" \
+            --arg branch "$GITHUB_REF_NAME" \
+            --arg commit "$short_sha" \
+            --arg run_num "$GITHUB_RUN_NUMBER" \
+            --arg run_url "$run_url" \
+            --arg artifact "$artifact" \
+            '{blocks:[
+              {type:"header",text:{type:"plain_text",text:($icon + " Trivy Image Scan Report"),emoji:true}},
+              {type:"section",fields:[
+                {type:"mrkdwn",text:"*Service*\nBackend\nFrontend"},
+                {type:"mrkdwn",text:"*CRITICAL*\n\($be_crit)\n\($fe_crit)"},
+                {type:"mrkdwn",text:"*HIGH*\n\($be_high)\n\($fe_high)"}
+              ]},
+              {type:"context",elements:[
+                {type:"mrkdwn",text:("Branch: `" + $branch + "` • Commit: `" + $commit + "` • Run #" + $run_num + " • <" + $run_url + "|View in GitHub Actions> • Artifact: `" + $artifact + "`")}
+              ]}
+            ]}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data "$payload"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
