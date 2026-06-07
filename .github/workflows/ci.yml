@@ -135,3 +135,29 @@ jobs:
         run: |
           docker push ghcr.io/${{ steps.meta.outputs.owner }}/kamka-frontend:${{ steps.meta.outputs.tag }}
           docker push ghcr.io/${{ steps.meta.outputs.owner }}/kamka-frontend:latest
+
+  # ─── Job 3: SSH deploy to EC2 ────────────────────────────────────────────────
+  deploy:
+    name: Deploy via SSH
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Deploy on server via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/kamka
+
+            echo "Pulling latest images..."
+            docker compose pull
+
+            echo "Restarting stack..."
+            docker compose up -d --remove-orphans
+
+            echo "Cleaning unused images..."
+            docker image prune -f
