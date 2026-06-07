@@ -166,8 +166,11 @@ jobs:
             echo "Pulling latest images..."
             docker compose pull
 
-            echo "Restarting stack..."
-            docker compose up -d --remove-orphans
+            echo "Rolling update..."
+            for service in api frontend; do
+              docker compose up -d --no-deps --force-recreate $service
+            done
+
 
             echo "Cleaning unused images..."
             docker image prune -f
@@ -182,3 +185,15 @@ jobs:
         env:
           CR_PAT: ${{ secrets.CR_PAT }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+
+      - name: Slack notify
+        if: always()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} *Kamka Deploy* — ${{ job.status }} on `${{ github.ref_name }}` by ${{ github.actor }} — <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
