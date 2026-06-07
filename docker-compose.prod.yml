@@ -40,6 +40,8 @@ services:
       - DB_USER=kamka_user
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PORT=5432
+      - DB_POOL_MIN=2
+      - DB_POOL_MAX=10
     read_only: true
     tmpfs:
       - /tmp
@@ -68,11 +70,11 @@ services:
     tmpfs:
       - /tmp
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/api/healthz || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000 || exit 1']
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
     logging:
       driver: json-file
       options:
