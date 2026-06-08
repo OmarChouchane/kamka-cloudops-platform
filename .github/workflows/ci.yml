@@ -365,6 +365,10 @@ jobs:
             export GRAFANA_PASSWORD=$(aws ssm get-parameter --name /kamka/GRAFANA_PASSWORD --with-decryption --query Parameter.Value --output text)
             export REGISTRY=ghcr.io/$GHCR_USERNAME
 
+            echo "Injecting secrets into configs..."
+            git checkout observability/alertmanager/alertmanager.yml
+            sed -i "s|\${SLACK_WEBHOOK_URL}|${SLACK_WEBHOOK_URL}|g" observability/alertmanager/alertmanager.yml
+
             echo "Logging in to GHCR..."
             echo "$CR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 

@@ -148,11 +148,6 @@ services:
     container_name: kamka-alertmanager
     volumes:
       - ./observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-    environment:
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-    command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
-      - --config.expand-env=true
     networks:
       - kamka_network
     restart: unless-stopped
