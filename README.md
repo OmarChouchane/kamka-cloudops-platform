@@ -171,6 +171,16 @@ AWS credentials are obtained via **OIDC** — no long-lived keys stored anywhere
 
 All firing alerts route to Slack via Alertmanager.
 
+![Grafana Dashboard](docs/grafana1.png)
+
+![Slack Alerts](docs/slack_alerts.png)
+
+---
+
+## Application
+
+![Web App](docs/webapp.png)
+
 ---
 
 ## Useful Commands
