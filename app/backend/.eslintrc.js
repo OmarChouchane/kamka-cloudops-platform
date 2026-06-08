@@ -11,4 +11,4 @@ module.exports = {
   rules: {
     'object-curly-newline': 'off',
   },
-};
+}

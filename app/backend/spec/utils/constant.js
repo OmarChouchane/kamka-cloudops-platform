@@ -1,6 +1,6 @@
-const { config } = require('dotenv');
+const { config } = require('dotenv')
 
-config();
-const url = process.env.INTEGRATION_TEST_HOST_URL;
+config()
+const url = process.env.INTEGRATION_TEST_HOST_URL
 
-module.exports = { url };
+module.exports = { url }

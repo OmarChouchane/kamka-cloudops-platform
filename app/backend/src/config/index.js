@@ -1,12 +1,12 @@
-process.env.NODE_CONFIG_DIR = `${__dirname}/`;
+process.env.NODE_CONFIG_DIR = `${__dirname}/`
 
-const config = require('config');
-const { config: configure } = require('dotenv');
+const config = require('config')
+const { config: configure } = require('dotenv')
 
-configure();
+configure()
 
 const configuration = {
   port: config.get('server.port'),
-};
+}
 
-module.exports = { configuration };
+module.exports = { configuration }

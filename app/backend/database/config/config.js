@@ -1,6 +1,6 @@
-const { config } = require('dotenv');
+const { config } = require('dotenv')
 
-config();
+config()
 
 module.exports = {
   development: {
@@ -25,4 +25,4 @@ module.exports = {
     dialect: 'postgres',
     port: process.env.DB_PORT || 5432,
   },
-};
+}
