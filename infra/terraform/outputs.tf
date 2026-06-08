@@ -22,6 +22,11 @@ output "iam_role_name" {
   value       = module.iam.role_name
 }
 
+output "github_actions_role_arn" {
+  description = "GitHub Actions OIDC role ARN — set as AWS_ROLE_ARN in GitHub Secrets"
+  value       = module.iam.github_actions_role_arn
+}
+
 output "instance_profile_name" {
   description = "IAM instance profile name"
   value       = module.iam.instance_profile_name

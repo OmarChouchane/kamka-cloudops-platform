@@ -60,3 +60,9 @@ variable "availability_zone" {
   type        = string
   default     = "eu-west-1a"
 }
+
+variable "github_repo" {
+  description = "GitHub repository in owner/repo format — used to scope the OIDC trust policy"
+  type        = string
+  default     = "OmarChouchane/kamka-cloudops-platform"
+}

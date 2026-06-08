@@ -2,25 +2,14 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "EC2Describe",
+      "Sid": "SSMReadSecrets",
       "Effect": "Allow",
       "Action": [
-        "ec2:DescribeInstances",
-        "ec2:DescribeAddresses",
-        "ec2:DescribeSecurityGroups"
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
       ],
-      "Resource": "*"
-    },
-    {
-      "Sid": "SSMAccess",
-      "Effect": "Allow",
-      "Action": [
-        "ssm:SendCommand",
-        "ssm:GetCommandInvocation",
-        "ssm:ListCommands"
-      ],
-      "Resource": "*"
+      "Resource": "arn:aws:ssm:eu-west-1:861648135209:parameter/kamka/*"
     }
   ]
 }
-
