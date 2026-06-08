@@ -19,7 +19,79 @@ concurrency:
 
 jobs:
 
-  # ─── Job 1: SAST + FS security scan ─────────────────────────────────────────
+  # ─── Job 1: Lint & Tests ──────────────────────────────────────────────────────
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Backend — install
+        run: cd app/backend && npm ci
+
+      - name: Backend — lint
+        run: cd app/backend && npm run lint
+
+      - name: Backend — migrate
+        run: cd app/backend && npm run sequelize db:migrate
+        env:
+          NODE_ENV: test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_DATABASE: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+
+      - name: Backend — start server
+        run: cd app/backend && node src/server.js &
+        env:
+          NODE_ENV: test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_DATABASE: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+
+      - name: Backend — wait for server
+        run: |
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:3000/hello && break
+            sleep 2
+          done
+
+      - name: Backend — run tests
+        run: cd app/backend && npx mocha spec --recursive --timeout 10000 --exit
+        env:
+          INTEGRATION_TEST_HOST_URL: http://localhost:3000
+          TZ: utc
+
+      - name: Frontend — install
+        run: cd app/frontend && npm ci
+
+      - name: Frontend — lint
+        run: cd app/frontend && npm run lint
+
+      - name: Frontend — prettier check
+        run: cd app/frontend && npx prettier --check . --ignore-unknown
+
+  # ─── Job 2: SAST + FS security scan ─────────────────────────────────────────
   security-scan:
     name: Security — SAST + FS Scan
     runs-on: ubuntu-latest
@@ -121,7 +193,7 @@ jobs:
   # ─── Job 2: Build → Image scan → Push ───────────────────────────────────────
   build-and-push:
     name: Build → Scan → Push
-    needs: security-scan
+    needs: [lint-and-test, security-scan]
     runs-on: ubuntu-latest
 
     permissions:
