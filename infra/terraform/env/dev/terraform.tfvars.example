@@ -17,3 +17,7 @@ allowed_ssh_cidr  = "0.0.0.0/0"
 vpc_cidr          = "10.0.0.0/16"
 subnet_cidr       = "10.0.1.0/24"
 availability_zone = "eu-west-1a"
+
+db_password       = "CHANGE_ME"
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+grafana_password  = "CHANGE_ME"

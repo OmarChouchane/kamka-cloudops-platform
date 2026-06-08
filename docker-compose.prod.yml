@@ -88,7 +88,7 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/reverse-proxy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -132,7 +132,7 @@ services:
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_SERVER_ROOT_URL=http://54.77.242.168/grafana
+      - GF_SERVER_ROOT_URL=http://${DOMAIN}/grafana
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     networks:
       - kamka_network
@@ -149,7 +149,10 @@ services:
     volumes:
       - ./observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     environment:
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --config.expand-env=true
     networks:
       - kamka_network
     restart: unless-stopped
@@ -167,10 +170,12 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      - /var/lib/node-exporter/textfile:/var/lib/node-exporter/textfile:ro
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --collector.textfile.directory=/var/lib/node-exporter/textfile
     networks:
       - kamka_network
     restart: unless-stopped

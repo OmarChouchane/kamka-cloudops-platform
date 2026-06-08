@@ -24,7 +24,6 @@ http://{$DOMAIN:localhost} {
         reverse_proxy grafana:3000
     }
 
-
     # All other traffic goes to the frontend
     handle {
         reverse_proxy frontend:3000

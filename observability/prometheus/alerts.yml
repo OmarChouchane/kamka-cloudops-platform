@@ -8,6 +8,7 @@ groups:
           severity: warning
         annotations:
           summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ printf \"%.1f\" $value }}% (threshold: 85%) for more than 5 minutes."
 
       - alert: HighMemory
         expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
@@ -16,6 +17,7 @@ groups:
           severity: critical
         annotations:
           summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ printf \"%.1f\" $value }}% (threshold: 90%) for more than 5 minutes."
 
       - alert: ContainerDown
         expr: absent(container_last_seen{name=~"kamka-.+"})
@@ -23,7 +25,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Container {{ $labels.name }} is down"
+          summary: "A kamka container is down"
+          description: "One or more containers matching 'kamka-*' have not been seen by cAdvisor for more than 1 minute."
 
       - alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[2m]) / rate(http_requests_total[2m]) * 100 > 5
@@ -32,6 +35,7 @@ groups:
           severity: critical
         annotations:
           summary: "High 5xx error rate on {{ $labels.job }}"
+          description: "5xx error rate is {{ printf \"%.1f\" $value }}% (threshold: 5%) over the last 2 minutes."
 
       - alert: DiskSpaceLow
         expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85
@@ -40,6 +44,7 @@ groups:
           severity: warning
         annotations:
           summary: "Disk usage above 85% on {{ $labels.instance }}"
+          description: "Disk usage is {{ printf \"%.1f\" $value }}% on {{ $labels.mountpoint }} (threshold: 85%)."
 
       - alert: BackupMissing
         expr: time() - backup_last_success_timestamp > 86400
@@ -48,3 +53,4 @@ groups:
           severity: warning
         annotations:
           summary: "No successful backup in the last 24 hours"
+          description: "Last backup was {{ $value | humanizeDuration }} ago. Run deploy/scripts/backup.sh to trigger a manual backup."

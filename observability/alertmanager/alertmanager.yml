@@ -11,8 +11,8 @@ route:
 receivers:
   - name: slack
     slack_configs:
-      - api_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+      - api_url: "${SLACK_WEBHOOK_URL}"
         channel: "#kamka-alerts"
         title: "[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}"
-        text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
+        text: "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}{{ end }}"
         send_resolved: true

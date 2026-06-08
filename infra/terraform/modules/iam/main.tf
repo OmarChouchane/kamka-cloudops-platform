@@ -19,7 +19,7 @@ resource "aws_iam_role" "ec2_role" {
   }
 }
 
-# Least-privilege inline policy: SSM Session Manager + CloudWatch Logs + ECR pull
+# Least-privilege inline policy: SSM Session Manager + CloudWatch Logs + SSM Parameter Store
 resource "aws_iam_role_policy" "ec2_policy" {
   name = "${var.project_name}-ec2-policy"
   role = aws_iam_role.ec2_role.id
@@ -57,17 +57,6 @@ resource "aws_iam_role_policy" "ec2_policy" {
         Resource = "arn:aws:logs:*:*:*"
       },
       {
-        Sid    = "ECRPullAccess"
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
-        ]
-        Resource = "*"
-      },
-      {
         Sid    = "SSMParameterStore"
         Effect = "Allow"
         Action = [
@@ -75,7 +64,7 @@ resource "aws_iam_role_policy" "ec2_policy" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:eu-west-1:${data.aws_caller_identity.current.account_id}:parameter/kamka/*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/kamka/*"
       }
     ]
   })
@@ -151,10 +140,11 @@ resource "aws_iam_role_policy" "github_actions" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:eu-west-1:${data.aws_caller_identity.current.account_id}:parameter/kamka/*"
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/kamka/*"
       }
     ]
   })
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
