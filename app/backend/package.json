@@ -9,6 +9,8 @@
     "sequelize": "sequelize --options-path=database/options.js",
     "test:local:migration": "npm run sequelize db:migrate:undo:all && npm run sequelize db:migrate && npm run sequelize db:seed:all",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "dev": "nodemon src/server.js"
   },
   "author": "",
@@ -16,8 +18,10 @@
   "devDependencies": {
     "eslint": "^8.42.0",
     "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-import": "^2.27.5",
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "prettier": "^2.8.8"
   },
   "dependencies": {
     "chai": "^4.3.7",

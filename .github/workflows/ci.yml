@@ -49,6 +49,9 @@ jobs:
       - name: Backend — lint
         run: cd app/backend && npm run lint
 
+      - name: Backend — prettier check
+        run: cd app/backend && npm run format:check -- --ignore-unknown
+
       - name: Backend — migrate
         run: cd app/backend && npm run sequelize db:migrate
         env:
