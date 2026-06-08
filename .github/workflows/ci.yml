@@ -358,6 +358,14 @@ jobs:
           script: |
             cd /opt/kamka
 
+            echo "Fetching secrets from SSM..."
+            export POSTGRES_PASSWORD=$(aws ssm get-parameter --name /kamka/POSTGRES_PASSWORD --with-decryption --query Parameter.Value --output text --region eu-west-1)
+            export DB_PASSWORD=$POSTGRES_PASSWORD
+            export SLACK_WEBHOOK_URL=$(aws ssm get-parameter --name /kamka/SLACK_WEBHOOK_URL --with-decryption --query Parameter.Value --output text --region eu-west-1)
+            export GRAFANA_PASSWORD=$(aws ssm get-parameter --name /kamka/GRAFANA_PASSWORD --with-decryption --query Parameter.Value --output text --region eu-west-1)
+            export REGISTRY=ghcr.io/omarchouchane
+            export DOMAIN=54.77.242.168
+
             echo "Logging in to GHCR..."
             echo "$CR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 

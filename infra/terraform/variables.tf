@@ -66,3 +66,21 @@ variable "github_repo" {
   type        = string
   default     = "OmarChouchane/kamka-cloudops-platform"
 }
+
+variable "db_password" {
+  description = "PostgreSQL password — stored as SecureString in SSM /kamka/POSTGRES_PASSWORD"
+  type        = string
+  sensitive   = true
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL — stored as SecureString in SSM /kamka/SLACK_WEBHOOK_URL"
+  type        = string
+  sensitive   = true
+}
+
+variable "grafana_password" {
+  description = "Grafana admin password — stored as SecureString in SSM /kamka/GRAFANA_PASSWORD"
+  type        = string
+  sensitive   = true
+}

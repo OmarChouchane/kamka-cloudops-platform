@@ -66,6 +66,16 @@ resource "aws_iam_role_policy" "ec2_policy" {
           "ecr:BatchGetImage"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "SSMParameterStore"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = "arn:aws:ssm:eu-west-1:${data.aws_caller_identity.current.account_id}:parameter/kamka/*"
       }
     ]
   })
